@@ -1,14 +1,10 @@
 package com.unascribed.blockrenderer;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.ExtensionPoint;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Mod(BlockRenderer.MODID)
 public class BlockRenderer {
@@ -20,6 +16,6 @@ public class BlockRenderer {
 
 	public BlockRenderer() {
 		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> renderHandler = new ClientRenderHandler());
-		ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST, () -> Pair.of(() -> "ignored", (remote, isServer) -> true));
+//		ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class, IExtensionPoint.DisplayTest(() -> "ignored", (remote, isServer) -> true));
 	}
 }

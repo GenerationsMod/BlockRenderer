@@ -1,34 +1,30 @@
 package com.unascribed.blockrenderer;
 
-import javax.annotation.Nonnull;
-
+import com.google.common.base.Strings;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.google.common.base.Strings;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.AbstractSlider;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.button.Button;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import javax.annotation.Nonnull;
 
 public class GuiConfigureRender extends Screen {
 
 	private final String prefill;
 	private final Screen old;
-	private TextFieldWidget text;
+	private EditBox text;
 	private Slider slider;
 	private double sliderValue;
 	private boolean fixSliderMax;
 
 	public GuiConfigureRender(Screen old, String prefill) {
-		super(StringTextComponent.EMPTY);
+		super(Component.empty());
 		this.old = old;
 		this.prefill = Strings.nullToEmpty(prefill);
 		this.sliderValue = 512;
@@ -36,39 +32,38 @@ public class GuiConfigureRender extends Screen {
 
 	@Override
 	public void resize(@Nonnull Minecraft minecraft, int width, int height) {
-		String oldText = text.getText();
+		String oldText = text.getValue();
 		this.init(minecraft, width, height);
-		text.setText(oldText);
+		text.setValue(oldText);
 		fixSliderMax = true;
 	}
 
 	@Override
 	public void init() {
-		minecraft.keyboardListener.enableRepeatEvents(true);
-		text = new TextFieldWidget(font, width / 2 - 100, height / 6 + 50, 200, 20, StringTextComponent.EMPTY);
-		text.setMaxStringLength(4096);
-		text.setText(prefill);
+//		minecraft.keyboardHandler.enableRepeatEvents(true); TODO: Figure if this is needed
+		text = new EditBox(font, width / 2 - 100, height / 6 + 50, 200, 20, Component.empty());
+		text.setMaxLength(4096);
+		text.setValue(prefill);
 
-		addButton(new Button(width / 2 - 100, height / 6 + 120, 98, 20, new TranslationTextComponent("gui.blockrenderer.cancel"),
-				button -> minecraft.displayGuiScreen(old)));
+		addWidget(Button.builder(Component.translatable("gui.blockrenderer.cancel"), button -> minecraft.setScreen(old)).bounds(width / 2 - 100, height / 6 + 120, 98, 20).build());
 
-		addButton(new Button(width / 2 + 2, height / 6 + 120, 98, 20, new TranslationTextComponent("gui.blockrenderer.render"), button -> render()));
-		slider = addButton(new Slider(width / 2 - 100, height / 6 + 80, 200, 20, new TranslationTextComponent("gui.blockrenderer.render_size"),
+		addWidget(Button.builder(Component.translatable("gui.blockrenderer.render"), button -> render()).bounds(width / 2 + 2, height / 6 + 120, 98, 20).build());
+		slider = addWidget(new Slider(width / 2 - 100, height / 6 + 80, 200, 20, Component.translatable("gui.blockrenderer.render_size"),
 				sliderValue, 16, getSliderMax()));
 		
-		text.setFocused2(true);
+		text.setFocused(true);
 		text.setCanLoseFocus(false);
 	}
 
 	private int getSliderMax() {
-		return Math.min(2048, Math.min(minecraft.getMainWindow().getWidth(), minecraft.getMainWindow().getHeight()));
+		return Math.min(2048, Math.min(minecraft.getWindow().getWidth(), minecraft.getWindow().getHeight()));
 	}
 
 	private int round(double value) {
 		int val = (int) value;
-		// There's a more efficient method in MathHelper, but it rounds up. We want the nearest.
+		// There's a more efficient method in Mth, but it rounds up. We want the nearest.
 		int nearestPowerOfTwo = (int) Math.pow(2, Math.ceil(Math.log(val) / Math.log(2)));
-		int minSize = Math.min(minecraft.getMainWindow().getHeight(), minecraft.getMainWindow().getWidth());
+		int minSize = Math.min(minecraft.getWindow().getHeight(), minecraft.getWindow().getWidth());
 		if (nearestPowerOfTwo < minSize && Math.abs(val - nearestPowerOfTwo) < 32) {
 			val = nearestPowerOfTwo;
 		}
@@ -76,17 +71,17 @@ public class GuiConfigureRender extends Screen {
 	}
 
 	@Override
-	public void render(@Nonnull MatrixStack matrix, int mouseX, int mouseY, float partialTicks) {
+	public void render(@Nonnull PoseStack matrix, int mouseX, int mouseY, float partialTicks) {
 		renderBackground(matrix);
-		if (text.getText().isEmpty()) {
-			text.setSuggestion(I18n.format("gui.blockrenderer.namespace"));
+		if (text.getValue().isEmpty()) {
+			text.setSuggestion(I18n.get("gui.blockrenderer.namespace"));
 		} else {
 			text.setSuggestion("");
 		}
 		super.render(matrix, mouseX, mouseY, partialTicks);
-		drawCenteredString(matrix, minecraft.fontRenderer, new TranslationTextComponent("gui.blockrenderer.configure"), width / 2, height / 6, -1);
-		int displayWidth = minecraft.getMainWindow().getWidth();
-		int displayHeight = minecraft.getMainWindow().getHeight();
+		drawCenteredString(matrix, minecraft.font, Component.translatable("gui.blockrenderer.configure"), width / 2, height / 6, -1);
+		int displayWidth = minecraft.getWindow().getWidth();
+		int displayHeight = minecraft.getWindow().getHeight();
 		boolean widthCap = (displayWidth < 2048);
 		boolean heightCap = (displayHeight < 2048);
 		String translationKey = null;
@@ -104,21 +99,21 @@ public class GuiConfigureRender extends Screen {
 			translationKey = "gui.blockrenderer.capped_height";
 		}
 		if (translationKey != null) {
-			drawCenteredString(matrix, minecraft.fontRenderer, new TranslationTextComponent(translationKey, Math.min(displayHeight, displayWidth)),
+			drawCenteredString(matrix, minecraft.font, Component.translatable(translationKey, Math.min(displayHeight, displayWidth)),
 					width / 2, height / 6 + 104, 0xFFFFFF);
 		}
-		text.renderButton(matrix, mouseX, mouseY, partialTicks);
+		text.renderWidget(matrix, mouseX, mouseY, partialTicks);
 	}
 
 	private void render() {
-		if (minecraft.world != null) {
-			BlockRenderer.renderHandler.pendingBulkRender = text.getText();
+		if (minecraft.level != null) {
+			BlockRenderer.renderHandler.pendingBulkRender = text.getValue();
 			BlockRenderer.renderHandler.pendingBulkRenderSize = round(sliderValue);
 			BlockRenderer.renderHandler.pendingBulkItems = true;
 			BlockRenderer.renderHandler.pendingBulkEntities = false;
 			BlockRenderer.renderHandler.pendingBulkStructures = false;
 		}
-		minecraft.displayGuiScreen(old);
+		minecraft.setScreen(old);
 	}
 
 	@Override
@@ -133,7 +128,7 @@ public class GuiConfigureRender extends Screen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (text.canWrite() && keyCode != GLFW.GLFW_KEY_ESCAPE) {//Manually handle hitting escape to make the whole interface go away
+		if (text.canConsumeInput() && keyCode != GLFW.GLFW_KEY_ESCAPE) {//Manually handle hitting escape to make the whole interface go away
 			if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
 				//Handle processing both the enter key and the numpad enter key
 				render();
@@ -146,7 +141,7 @@ public class GuiConfigureRender extends Screen {
 
 	@Override
 	public boolean charTyped(char c, int keyCode) {
-		if (text.canWrite()) {
+		if (text.canConsumeInput()) {
 			return text.charTyped(c, keyCode);
 		}
 		return super.charTyped(c, keyCode);
@@ -163,36 +158,36 @@ public class GuiConfigureRender extends Screen {
 	@Override
 	public void onClose() {
 		super.onClose();
-		minecraft.keyboardListener.enableRepeatEvents(false);
+//		minecraft.keyboardListener.enableRepeatEvents(false);
 	}
 
 	private static double normalizeValue(double value, double min, double max) {
-		return MathHelper.clamp((MathHelper.clamp(value, min, max) - min) / (max - min), 0.0D, 1.0D);
+		return Mth.clamp((Mth.clamp(value, min, max) - min) / (max - min), 0.0D, 1.0D);
 	}
 
-	private class Slider extends AbstractSlider {
+	private class Slider extends AbstractSliderButton {
 
 		private final double minValue;
 		private double maxValue;
 
-		public Slider(int x, int y, int width, int height, ITextComponent message, double defaultValue, double minValue, double maxValue) {
+		public Slider(int x, int y, int width, int height, Component message, double defaultValue, double minValue, double maxValue) {
 			super(x, y, width, height, message, normalizeValue(defaultValue, minValue, maxValue));
 			this.minValue = minValue;
 			this.maxValue = maxValue;
-			func_230979_b_();
+			updateMessage();
 		}
 
 		@Override
-		protected void func_230979_b_() {
-			setMessage(new TranslationTextComponent("gui.blockrenderer.selected_dimensions", round(GuiConfigureRender.this.sliderValue)));
+		protected void updateMessage() {
+			setMessage(Component.translatable("gui.blockrenderer.selected_dimensions", round(GuiConfigureRender.this.sliderValue)));
 		}
 
 		private double denormalizeValue() {
-			return MathHelper.clamp(MathHelper.lerp(MathHelper.clamp(sliderValue, 0.0D, 1.0D), minValue, maxValue), minValue, maxValue);
+			return Mth.clamp(Mth.lerp(Mth.clamp(sliderValue, 0.0D, 1.0D), minValue, maxValue), minValue, maxValue);
 		}
 
 		@Override
-		protected void func_230972_a_() {
+		protected void applyValue() {
 			GuiConfigureRender.this.sliderValue = denormalizeValue();
 		}
 
@@ -200,8 +195,8 @@ public class GuiConfigureRender extends Screen {
 			double value = denormalizeValue();
 			this.maxValue = maxValue;
 			sliderValue = normalizeValue(value, minValue, this.maxValue);
-			func_230972_a_();
-			func_230979_b_();
+			applyValue();
+			updateMessage();
 		}
 	}
 }

@@ -1,21 +1,19 @@
 package com.unascribed.blockrenderer;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
-
 import com.google.common.primitives.Doubles;
-
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.GraphicsStatus;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.settings.GraphicsFanciness;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.vector.Quaternion;
-import net.minecraft.util.math.vector.Vector3f;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import org.joml.Quaternionf;
 
 public class EntityRenderTask extends RenderTask {
 	
@@ -31,7 +29,7 @@ public class EntityRenderTask extends RenderTask {
 	}
 	
 	@Override
-	public ITextComponent getPreviewDisplayName() {
+	public Component getPreviewDisplayName() {
 		return entity.getDisplayName();
 	}
 	
@@ -42,79 +40,78 @@ public class EntityRenderTask extends RenderTask {
 
 	@Override
 	public ResourceLocation getId() {
-		return entity.getType().getRegistryName();
+		return entity.getType().builtInRegistryHolder().key().location();
 	}
 
 	@Override
-	public void renderPreview(MatrixStack matrices, int x, int y) {
-		RenderSystem.pushMatrix();
+	public void renderPreview(PoseStack matrices, int x, int y) {
+		matrices.pushPose();
 		try {
-			RenderSystem.multMatrix(matrices.getLast().getMatrix());
-			RenderSystem.translatef(x+8, y+8, 0);
-			AxisAlignedBB rbb = entity.getRenderBoundingBox();
-			drawEntity(entity, 16/(float)Doubles.max(rbb.getXSize(), rbb.getYSize(), rbb.getZSize()));
+//			RenderSystem.multMatrix(matrices.getLast().getMatrix());
+			matrices.translate(x+8, y+8, 0);
+			AABB rbb = entity.getBoundingBoxForCulling();
+			drawEntity(matrices, entity, 16/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
 		} finally {
-			RenderSystem.popMatrix();
+			matrices.popPose();
 		}
 	}
 
 	@Override
-	public void render(int renderSize) {
-		RenderSystem.pushMatrix();
+	public void render(PoseStack matrices, int renderSize) {
+		matrices.pushPose();
 		try {
-			RenderSystem.translatef(0.5f, 0.5f, 0);
-			AxisAlignedBB rbb = entity.getRenderBoundingBox();
-			drawEntity(entity, 1/(float)Doubles.max(rbb.getXSize(), rbb.getYSize(), rbb.getZSize()));
+			matrices.translate(0.5f, 0.5f, 0);
+			AABB rbb = entity.getBoundingBoxForCulling();
+			drawEntity(matrices, entity, 1/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
 		} finally {
-			RenderSystem.popMatrix();
+			matrices.popPose();
 		}
 	}
 	
-	public static void drawEntity(Entity entity, float scale) {
+	public static void drawEntity(PoseStack matrices, Entity entity, float scale) {
 		if (entity == null) return;
 		float yaw = -45;
 		float pitch = 0;
-		RenderSystem.pushMatrix();
-		MatrixStack matrices = new MatrixStack();
+		matrices.pushPose();
 		matrices.scale(scale, scale, scale);
-		Quaternion rot = Vector3f.ZP.rotationDegrees(180f);
-		Quaternion xRot = Vector3f.XP.rotationDegrees(20f);
-		rot.multiply(xRot);
-		matrices.rotate(rot);
-		float oldYaw = entity.rotationYaw;
-		float oldPitch = entity.rotationPitch;
+		Quaternionf rot = Axis.ZP.rotationDegrees(180f);
+		Quaternionf xRot = Axis.XP.rotationDegrees(20f);
+		rot.mul(xRot);
+		matrices.mulPose(rot);
+		float oldYaw = entity.yRotO;
+		float oldPitch = entity.xRotO;
 		LivingEntity lentity = entity instanceof LivingEntity ? (LivingEntity)entity : null;
-		Float oldYawOfs = lentity != null ? lentity.renderYawOffset : null;
-		Float oldPrevYawHead = lentity != null ? lentity.prevRotationYawHead : null;
-		Float oldYawHead = lentity != null ? lentity.rotationYawHead : null;
-		entity.rotationYaw = yaw;
-		entity.rotationPitch = -pitch;
+		Float oldYawOfs = lentity != null ? lentity.yBodyRot : null;
+		Float oldPrevYawHead = lentity != null ? lentity.yHeadRotO : null;
+		Float oldYawHead = lentity != null ? lentity.yHeadRot : null;
+		entity.yRotO = yaw;
+		entity.xRotO = -pitch;
 		if (lentity != null) {
-			lentity.renderYawOffset = yaw;
-			lentity.rotationYawHead = entity.rotationYaw;
-			lentity.prevRotationYawHead = entity.rotationYaw;
+			lentity.yBodyRot = yaw;
+			lentity.yHeadRotO = entity.yRotO;
+			lentity.yHeadRotO = entity.xRotO;
 		}
-		EntityRendererManager erm = Minecraft.getInstance().getRenderManager();
+		EntityRenderDispatcher erm = Minecraft.getInstance().getEntityRenderDispatcher();
 		xRot.conjugate();
-		erm.setCameraOrientation(xRot);
+		erm.overrideCameraOrientation(xRot);
 		erm.setRenderShadow(false);
-		GraphicsFanciness oldFanciness = Minecraft.getInstance().gameSettings.graphicFanciness;
-		Minecraft.getInstance().gameSettings.graphicFanciness = GraphicsFanciness.FANCY;
+		GraphicsStatus oldFanciness = Minecraft.getInstance().options.graphicsMode().get();
+		Minecraft.getInstance().options.graphicsMode().set(GraphicsStatus.FANCY);
 		try {
-			IRenderTypeBuffer.Impl buf = Minecraft.getInstance().getRenderTypeBuffers().getBufferSource();
-			erm.renderEntityStatic(entity, 0, 0, 0, 0, 1, matrices, buf, 0xF000F0);
-			buf.finish();
+			MultiBufferSource.BufferSource buf = Minecraft.getInstance().renderBuffers().bufferSource();
+			erm.render(entity, 0, 0, 0, 0, 1, matrices, buf, 0xF000F0);
+			buf.endBatch();
 		} finally {
-			Minecraft.getInstance().gameSettings.graphicFanciness = oldFanciness;
+			Minecraft.getInstance().options.graphicsMode().set(oldFanciness);
 			erm.setRenderShadow(true);
-			entity.rotationYaw = oldYaw;
-			entity.rotationPitch = oldPitch;
+			entity.yRotO = oldYaw;
+			entity.xRotO = oldPitch;
 			if (lentity != null) {
-				lentity.renderYawOffset = oldYawOfs;
-				lentity.prevRotationYawHead = oldPrevYawHead;
-				lentity.rotationYawHead = oldYawHead;
+				lentity.yBodyRot = oldYawOfs;
+				lentity.yHeadRotO = oldPrevYawHead;
+				lentity.yHeadRot = oldYawHead;
 			}
-			RenderSystem.popMatrix();
+			matrices.popPose();
 		}
 	}
 	

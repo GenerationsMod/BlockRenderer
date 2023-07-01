@@ -9,15 +9,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.IAsyncReloader;
+import net.minecraft.server.packs.resources.ReloadInstance;
 import net.minecraft.util.Unit;
-import net.minecraft.util.Util;
-
 /**
  * Heavily modified version of AsyncReloader
  */
-public class AsyncRenderer implements IAsyncReloader {
+public class AsyncRenderer implements ReloadInstance {
 
 	private final CompletableFuture<Unit> allAsyncCompleted = new CompletableFuture<>();
 	private final CompletableFuture<List<Void>> resultListFuture;
@@ -50,7 +49,7 @@ public class AsyncRenderer implements IAsyncReloader {
 			list.add(stateFuture);
 			waitFor = stateFuture;
 		}
-		resultListFuture = Util.gather(list);
+		resultListFuture = Util.sequence(list);
 	}
 
 	public void cancel() {
@@ -64,30 +63,28 @@ public class AsyncRenderer implements IAsyncReloader {
 
 	@Nonnull
 	@Override
-	public CompletableFuture<Unit> onceDone() {
+	public CompletableFuture<Unit> done() {
 		return resultListFuture.thenApply(result -> Unit.INSTANCE);
 	}
 
 	@Override
-	public float estimateExecutionSpeed() {
+	public float getActualProgress() {
 		int remaining = taskCount - taskSet.size();
 		float completed = 2 * asyncCompleted.get() + remaining;
 		float total = 2 * asyncScheduled.get() + taskCount;
 		return completed / total;
 	}
 
-	@Override
 	public boolean asyncPartDone() {
 		return allAsyncCompleted.isDone();
 	}
 
-	@Override
 	public boolean fullyDone() {
 		return resultListFuture.isDone();
 	}
 
 	@Override
-	public void join() {
+	public void checkExceptions() {
 		if (resultListFuture.isCompletedExceptionally()) {
 			resultListFuture.join();
 		}
