@@ -15,6 +15,7 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -197,7 +198,7 @@ public class ClientRenderHandler {
 		mc.setOverlay(progressBar);
 	}
 
-	private PoseStack setUpRenderState(Minecraft mc, int desiredSize) {
+	private GuiGraphics setUpRenderState(Minecraft mc, int desiredSize) {
 
 //		RenderSystem.pushMatrix();
 		//As we render to the back-buffer, we need to cap our render size
@@ -227,13 +228,13 @@ public class ClientRenderHandler {
 //		RenderHelper.enableStandardItemLighting();
 		Lighting.setupFor3DItems();
 
-		PoseStack posestack1 = new PoseStack();
+		var posestack1 = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
 
 		float scale = size / (16f);
-		posestack1.translate(0, 0, -(scale * 100));
+		posestack1.pose().translate(0, 0, -(scale * 100));
 
-		posestack1.scale(scale, scale, scale);
-		posestack1.translate(0, 0, -50);
+		posestack1.pose().scale(scale, scale, scale);
+		posestack1.pose().translate(0, 0, -50);
 //		oldZLevel = mc.getItemRenderer().zLevel;
 //		mc.getItemRenderer().zLevel = -50;
 

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.GraphicsStatus;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.network.chat.Component;
@@ -44,27 +45,27 @@ public class EntityRenderTask extends RenderTask {
 	}
 
 	@Override
-	public void renderPreview(PoseStack matrices, int x, int y) {
-		matrices.pushPose();
+	public void renderPreview(GuiGraphics matrices, int x, int y) {
+		matrices.pose().pushPose();
 		try {
 //			RenderSystem.multMatrix(matrices.getLast().getMatrix());
-			matrices.translate(x+8, y+8, 0);
+			matrices.pose().translate(x+8, y+8, 0);
 			AABB rbb = entity.getBoundingBoxForCulling();
-			drawEntity(matrices, entity, 16/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
+			drawEntity(matrices.pose(), entity, 16/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
 		} finally {
-			matrices.popPose();
+			matrices.pose().popPose();
 		}
 	}
 
 	@Override
-	public void render(PoseStack matrices, int renderSize) {
-		matrices.pushPose();
+	public void render(GuiGraphics matrices, int renderSize) {
+		matrices.pose().pushPose();
 		try {
-			matrices.translate(0.5f, 0.5f, 0);
+			matrices.pose().translate(0.5f, 0.5f, 0);
 			AABB rbb = entity.getBoundingBoxForCulling();
-			drawEntity(matrices, entity, 1/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
+			drawEntity(matrices.pose(), entity, 1/(float)Doubles.max(rbb.getXsize(), rbb.getYsize(), rbb.getZsize()));
 		} finally {
-			matrices.popPose();
+			matrices.pose().popPose();
 		}
 	}
 	

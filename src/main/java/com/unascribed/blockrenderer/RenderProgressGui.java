@@ -3,6 +3,7 @@ package com.unascribed.blockrenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FastColor;
@@ -76,7 +77,7 @@ public class RenderProgressGui extends Overlay {
 	}
 
 	@Override
-	public void render(@Nonnull PoseStack matrix, int mouseX, int mouseY, float partialTicks) {
+	public void render(@Nonnull GuiGraphics matrix, int mouseX, int mouseY, float partialTicks) {
 		int scaledWidth = mc.getWindow().getGuiScaledWidth();
 		int scaledHeight = mc.getWindow().getGuiScaledHeight();
 		long now = Util.getMillis();
@@ -94,13 +95,13 @@ public class RenderProgressGui extends Overlay {
 				mc.screen.render(matrix, 0, 0, partialTicks);
 			}
 			a = Mth.ceil((1 - Mth.clamp(fadeOutTime - 1, 0, 1)) * 255);
-			fill(matrix, 0, 0, scaledWidth, scaledHeight, BG_NOALPHA | a << 24);
+			matrix.fill(0, 0, scaledWidth, scaledHeight, BG_NOALPHA | a << 24);
 		} else {
 			if (mc.screen != null && fadeInTime < 1) {
 				mc.screen.render(matrix, mouseX, mouseY, partialTicks);
 			}
 			a = Mth.ceil(Mth.clamp(fadeInTime, 0.15, 1) * 255);
-			fill(matrix, 0, 0, scaledWidth, scaledHeight, BG_NOALPHA | a << 24);
+			matrix.fill(0, 0, scaledWidth, scaledHeight, BG_NOALPHA | a << 24);
 		}
 
 		int barSize = (int)(((Math.min(scaledWidth * 0.75, scaledHeight) * 0.25)*4)/2);
@@ -126,37 +127,37 @@ public class RenderProgressGui extends Overlay {
 		}
 	}
 
-	private void drawProgressBar(PoseStack matrix, int xStart, int yStart, int xEnd, int yEnd, float alpha) {
+	private void drawProgressBar(GuiGraphics matrix, int xStart, int yStart, int xEnd, int yEnd, float alpha) {
 		int filled = Mth.ceil((xEnd - xStart - 2) * this.progress);
 		int a = Math.round(alpha * 255);
 		int packed = FastColor.ARGB32.color(a, 255, 255, 255);
-		fill(matrix, xStart + 1, yStart, xEnd - 1, yStart + 1, packed);
-		fill(matrix, xStart + 1, yEnd, xEnd - 1, yEnd - 1, packed);
-		fill(matrix, xStart, yStart, xStart + 1, yEnd, packed);
-		fill(matrix, xEnd, yStart, xEnd - 1, yEnd, packed);
-		fill(matrix, xStart + 2, yStart + 2, xStart + filled, yEnd - 2, packed);
+		matrix.fill(xStart + 1, yStart, xEnd - 1, yStart + 1, packed);
+		matrix.fill(xStart + 1, yEnd, xEnd - 1, yEnd - 1, packed);
+		matrix.fill(xStart, yStart, xStart + 1, yEnd, packed);
+		matrix.fill(xEnd, yStart, xEnd - 1, yEnd, packed);
+		matrix.fill(xStart + 2, yStart + 2, xStart + filled, yEnd - 2, packed);
 	}
 
-	private void renderProgressText(PoseStack matrix, int scaledWidth, int scaledHeight, int a) {
-		matrix.pushPose();
-		matrix.scale(2, 2, 0);
+	private void renderProgressText(GuiGraphics matrix, int scaledWidth, int scaledHeight, int a) {
+		matrix.pose().pushPose();
+		matrix.pose().scale(2, 2, 0);
 		if (a != 0) {
-			drawCenteredString(matrix, mc.font, title, scaledWidth / 4, scaledHeight / 4 - 24, 0xFFFFFF|a);
+			matrix.drawCenteredString(mc.font, title, scaledWidth / 4, scaledHeight / 4 - 24, 0xFFFFFF|a);
 		}
 		int subTitleCount = subTitles.size();
 		if (subTitleCount > 0) {
-			matrix.scale(0.5F, 0.5F, 0);
+			matrix.pose().scale(0.5F, 0.5F, 0);
 			int subTitleX = scaledWidth / 2;
 			int subTitleY = scaledHeight / 2;
 			if (a != 0) {
 				for (int i = 0; i < subTitleCount; i++) {
-					drawCenteredString(matrix, mc.font, subTitles.get(i), subTitleX, subTitleY + 20 * (i - 1), 0xFFFFFF|a);
+					matrix.drawCenteredString(mc.font, subTitles.get(i), subTitleX, subTitleY + 20 * (i - 1), 0xFFFFFF|a);
 				}
 			}
 			if (task != null) {
 				task.renderPreview(matrix, subTitleX - 8, subTitleY + 20 * (subTitleCount - 1));
 			}
 		}
-		matrix.popPose();
+		matrix.pose().popPose();
 	}
 }

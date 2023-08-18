@@ -3,6 +3,7 @@ package com.unascribed.blockrenderer;
 import com.google.common.base.Strings;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -71,7 +72,7 @@ public class GuiConfigureRender extends Screen {
 	}
 
 	@Override
-	public void render(@Nonnull PoseStack matrix, int mouseX, int mouseY, float partialTicks) {
+	public void render(@Nonnull GuiGraphics matrix, int mouseX, int mouseY, float partialTicks) {
 		renderBackground(matrix);
 		if (text.getValue().isEmpty()) {
 			text.setSuggestion(I18n.get("gui.blockrenderer.namespace"));
@@ -79,7 +80,7 @@ public class GuiConfigureRender extends Screen {
 			text.setSuggestion("");
 		}
 		super.render(matrix, mouseX, mouseY, partialTicks);
-		drawCenteredString(matrix, minecraft.font, Component.translatable("gui.blockrenderer.configure"), width / 2, height / 6, -1);
+		matrix.drawCenteredString(minecraft.font, Component.translatable("gui.blockrenderer.configure"), width / 2, height / 6, -1);
 		int displayWidth = minecraft.getWindow().getWidth();
 		int displayHeight = minecraft.getWindow().getHeight();
 		boolean widthCap = (displayWidth < 2048);
@@ -99,7 +100,7 @@ public class GuiConfigureRender extends Screen {
 			translationKey = "gui.blockrenderer.capped_height";
 		}
 		if (translationKey != null) {
-			drawCenteredString(matrix, minecraft.font, Component.translatable(translationKey, Math.min(displayHeight, displayWidth)),
+			matrix.drawCenteredString(minecraft.font, Component.translatable(translationKey, Math.min(displayHeight, displayWidth)),
 					width / 2, height / 6 + 104, 0xFFFFFF);
 		}
 		text.renderWidget(matrix, mouseX, mouseY, partialTicks);
